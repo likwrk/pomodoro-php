@@ -1,25 +1,47 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="stylesheet" href="style.css">
-    <title>Tomatoes</title>
+	<meta charset="UTF-8">
+	<meta name="viewport"
+				content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<link rel="stylesheet" href="/style.css">
+	<script src="/script.js"></script>
+	<title>Tomatoes</title>
 </head>
 <body>
-    <table>
-        <tr>
-            <th>day</th>
-            <th>tomatoes</th>
-        </tr>
-        {% for day in days %}
-            <tr>
-                <td>{{ day.day }}</td>
-                <td>{{ day.timers|length }}</td>
-            </tr>
-        {% endfor %}
-    </table>
+<table>
+	<tr>
+		<th>day</th>
+		<th>tomatoes</th>
+		<th>time</th>
+		<th>comment</th>
+		<th>logged</th>
+	</tr>
+	{% for day in days %}
+		<tr>
+			<td rowspan="{{ day.timers|length + 1 }}">{{ day.day }}</td>
+			<td rowspan="{{ day.timers|length + 1 }}">{{ day.timers|length }}</td>
+		</tr>
+		{% for timer in day.timers %}
+			<tr>
+				<td>{{ timer.start|date('H:i') }} - {{ timer.end|date('H:i') }}</td>
+				<td>
+					<form data-timer="{{ timer.id }}" onsubmit="Pomodoro.updateComment(this);return false;">
+						<input style="width: 350px;" onchange="Pomodoro.updateComment(this)" placeholder="Comment" class="comment" type="text" value="{{ timer.comment }}">
+						{#<input type="submit" value="Update">#}
+					</form>
+				</td>
+				<td>
+					{% if timer.logged %}
+						<input onchange="Pomodoro.updateLogged(this)" data-timer="{{ timer.id }}" type="checkbox" checked="checked">
+					{% else %}
+						<input onchange="Pomodoro.updateLogged(this)" data-timer="{{ timer.id }}" type="checkbox">
+					{% endif %}
+				</td>
+			</tr>
+		{% endfor %}
+	{% endfor %}
+</table>
 </body>
 </html>

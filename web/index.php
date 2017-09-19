@@ -1,8 +1,10 @@
 <?php
+date_default_timezone_set('Europe/Moscow');
 require_once __DIR__.'/../vendor/autoload.php';
 
-/*use \Symfony\Component\Debug\ErrorHandler;
+use \Symfony\Component\Debug\ErrorHandler;
 use \Symfony\Component\Debug\ExceptionHandler;
+use Symfony\Component\HttpFoundation\Request;
 
 ini_set('display_errors', 1);
 error_reporting(-1);
@@ -11,11 +13,18 @@ error_reporting(E_ALL);
 ErrorHandler::register();
 if ('cli' !== PHP_SAPI) {
 	ExceptionHandler::register();
-}*/
+}
 
 $app = new Silex\Application();
 
-//$app['debug'] = true;
+$app->before(function(Request $request) {
+	if (0 === strpos($request->headers->get('Content-Type'), 'application/json')) {
+		$data = json_decode($request->getContent(), true);
+		$request->request->replace(is_array($data) ? $data : array());
+	}
+});
+
+$app['debug'] = true;
 
 spl_autoload_register(function ($class_name) {
 	$filename = __DIR__ . '/../' . $class_name . '.php';

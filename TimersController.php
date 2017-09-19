@@ -3,6 +3,7 @@
 use Silex\Api\ControllerProviderInterface;
 use Silex\Application;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 
 class TimersController implements ControllerProviderInterface
 {
@@ -37,6 +38,10 @@ class TimersController implements ControllerProviderInterface
 		});
 		$controllers->post('/timers/start/long', function() {
 			return $this->startLong();
+		});
+		$controllers->put('/timers/{id}', function(Request $request, $id) {
+			$data = $request->request->all();
+			return $this->updateTimer($id, $data);
 		});
 		return $controllers;
 	}
@@ -106,6 +111,17 @@ class TimersController implements ControllerProviderInterface
 	public function startLong()
 	{
 		return $this->start(3);
+	}
+
+	private function updateTimer($id, $data)
+	{
+		if (isset($data['comment'])) {
+			$this->timersService->updateComment($id, $data['comment']);
+		}
+		if (isset($data['logged'])) {
+			$this->timersService->updateLogged($id, $data['logged']);
+		}
+		return new JsonResponse($this->timersService->getById($id));
 	}
 
 }

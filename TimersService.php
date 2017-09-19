@@ -14,7 +14,7 @@ class TimersService
 	{
 		return array_map([$this, 'formatTimer'], $this->db->fetchAll('
 			SELECT 
-				timers.id, timers.type, types.name, timers.start, timers.end, (timers.start + types.length - ?) as timeleft, timers.completed
+				timers.*, (timers.start + types.length - ?) as timeleft, types.name
 			FROM 
 				timers 
 			LEFT JOIN 
@@ -38,11 +38,20 @@ class TimersService
 		return $timersByDay;
 	}
 
+	public function updateComment($id, $comment = '') {
+		return $this->db->executeUpdate('UPDATE timers SET comment = ? WHERE id = ? LIMIT 1', [$comment, (int)$id]);
+	}
+
+	public function updateLogged($id, $logged = true)
+	{
+		return $this->db->executeUpdate('UPDATE timers SET logged = ? WHERE id = ? LIMIT 1', [(int)$logged, (int)$id]);
+	}
+
 	public function getCompleted()
 	{
 		return array_map([$this, 'formatTimer'], $this->db->fetchAll('
 			SELECT 
-				timers.id, timers.type, types.name, timers.start, timers.end, timers.completed
+				timers.*
 			FROM 
 				timers 
 			LEFT JOIN 
@@ -58,7 +67,7 @@ class TimersService
 	{
 		return array_map([$this, 'formatTimer'], $this->db->fetchAll('
 			SELECT 
-				timers.id, timers.type, types.name, timers.start, timers.end, timers.completed
+				timers.*
 			FROM 
 				timers 
 			LEFT JOIN 
@@ -79,6 +88,11 @@ class TimersService
 		return $this->db->lastInsertId();
 	}
 
+	public function getById($id)
+	{
+		return $this->formatTimer($this->db->fetchAssoc('SELECT * FROM timers WHERE id = ? LIMIT 1', [(int)$id]));
+	}
+
 	public function getNextType()
 	{
 		$lastTimer = $this->formatTimer($this->db->fetchAssoc('SELECT * FROM timers ORDER BY start DESC LIMIT 1'));
@@ -89,19 +103,27 @@ class TimersService
 		if ($lastTimer['type'] === 1 && $lastTimer['completed'] === 0) {
 			return 1;
 		}
-		$lastLong = $this->db->fetchAssoc('SELECT * FROM timers WHERE type = 3 ORDER BY start DESC LIMIT 1');
-		$prevPomodoros = $this->db->fetchColumn('SELECT count(*) FROM timers WHERE completed = 1 AND type = 1 AND start > ?', [$lastLong['start']]);
-		if ($prevPomodoros < 4) {
-			return 2;
+		$lastLongStart = $this->db->fetchColumn('SELECT start FROM timers WHERE type = 3 ORDER BY start DESC LIMIT 1');
+		if (empty($lastLongStart)) {
+			$lastLongStart = 0;
 		}
-		return 3;
+		$prevPomodoros = $this->db->fetchColumn('SELECT count(*) FROM timers WHERE completed = 1 AND type = 1 AND start > ?', [(int)$lastLongStart]);
+		if ($prevPomodoros < 4) {
+			return 2; // short break
+		}
+		return 3; // long break
 	}
 
 	public function stopAll()
 	{
 		$active = $this->getActive();
 		foreach ($active as $timer) {
-			$this->stop($timer['id'], $timer['timeleft'] < 1);
+			// always mark breaks as completed
+			if ($timer['type'] > 1) {
+				$this->stop($timer['id'], true);
+			} else {
+				$this->stop($timer['id'], $timer['timeleft'] < 1);
+			}
 		}
 	}
 
@@ -123,7 +145,9 @@ class TimersService
 			'start' => !empty($timer['start']) ? (int)$timer['start'] : null,
 			'end' => !empty($timer['end']) ? (int)$timer['end'] : null,
 			'timeleft' => !empty($timer['timeleft']) ? (int)$timer['timeleft'] : null,
-			'completed' => (int)$timer['completed']
+			'completed' => (int)$timer['completed'],
+			'logged' => (int)$timer['logged'],
+			'comment' => !empty($timer['comment']) ? $timer['comment'] : ''
 		];
 	}
 }
